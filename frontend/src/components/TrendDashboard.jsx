@@ -75,25 +75,101 @@ const processChartsData = (posts) => {
 };
 
 const TrendChartsView = ({ posts }) => {
+  const [metric, setMetric] = useState('likes'); // 'likes' or 'comments'
   const data = processChartsData(posts);
   if (!data) return <p style={{ color: 'var(--text-muted)' }}>No hay datos suficientes para graficar.</p>;
 
   const { engagementData, topHashtags, toneData } = data;
-  const maxLikes = Math.max(...engagementData.map(d => d.likes)) || 1;
+  
+  // Calculate max according to metric
+  const maxVal = Math.max(...engagementData.map(d => metric === 'likes' ? d.likes : d.comments)) || 1;
+
+  // Process circle tone segments
+  const circumference = 2 * Math.PI * 35; // C = 219.91
+  let accumulatedPercentage = 0;
+  
+  const hasToneData = toneData.some(t => t.percentage > 0);
+  const processedToneData = hasToneData ? toneData : [
+    { name: 'Técnico/Corporativo', percentage: 100, count: 0 },
+    { name: 'Educativo/Paciente', percentage: 0, count: 0 },
+    { name: 'Comercial/Ventas', percentage: 0, count: 0 }
+  ];
+
+  const toneSegments = processedToneData.map((t, idx) => {
+    const percentage = t.percentage;
+    const strokeLength = (percentage / 100) * circumference;
+    const strokeSpace = circumference - strokeLength;
+    const strokeOffset = circumference - (accumulatedPercentage / 100) * circumference;
+    accumulatedPercentage += percentage;
+    return {
+      ...t,
+      strokeDasharray: `${strokeLength} ${strokeSpace}`,
+      strokeDashoffset: strokeOffset,
+      color: ['var(--accent-primary)', 'var(--accent-green)', 'var(--accent-pink)'][idx]
+    };
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* 1. Bar Chart for Engagement */}
-      <div style={{ background: 'var(--bg-card)', padding: '16px', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)' }}>
-        <h4 style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>📈 Engagement Comparativo (Likes)</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Interacciones por post</span>
-        </h4>
-        <div style={{ display: 'flex', height: '180px', alignItems: 'flex-end', justifyContent: 'space-between', padding: '10px 10px 0 10px', gap: '16px', borderBottom: '1px solid var(--border-color)' }}>
+      <div style={{ background: 'var(--bg-card)', padding: '16px', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <h4 style={{ fontSize: '0.9rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>📈 Engagement Comparativo</span>
+          </h4>
+          
+          {/* Metric Selector */}
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px' }}>
+            <button 
+              onClick={() => setMetric('likes')}
+              style={{
+                background: metric === 'likes' ? 'var(--accent-primary)' : 'transparent',
+                border: 'none',
+                color: metric === 'likes' ? 'white' : 'var(--text-muted)',
+                fontSize: '0.75rem',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+            >
+              Likes
+            </button>
+            <button 
+              onClick={() => setMetric('comments')}
+              style={{
+                background: metric === 'comments' ? 'var(--accent-primary)' : 'transparent',
+                border: 'none',
+                color: metric === 'comments' ? 'white' : 'var(--text-muted)',
+                fontSize: '0.75rem',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+            >
+              Comentarios
+            </button>
+          </div>
+        </div>
+
+        {/* Bar Chart Graphics */}
+        <div style={{ display: 'flex', height: '180px', alignItems: 'flex-end', justifyContent: 'space-between', padding: '15px 10px 0 10px', gap: '12px', borderBottom: '1px solid var(--border-color)', position: 'relative' }}>
+          {/* Background Gridlines */}
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none', opacity: 0.15 }}>
+            <div style={{ borderTop: '1px dashed var(--text-main)', width: '100%', height: 0 }} />
+            <div style={{ borderTop: '1px dashed var(--text-main)', width: '100%', height: 0 }} />
+            <div style={{ borderTop: '1px dashed var(--text-main)', width: '100%', height: 0 }} />
+            <div style={{ borderTop: '1px dashed var(--text-main)', width: '100%', height: 0 }} />
+          </div>
+
           {engagementData.map((d, index) => {
-            const heightPct = (d.likes / maxLikes) * 100;
+            const currentVal = metric === 'likes' ? d.likes : d.comments;
+            const heightPct = (currentVal / maxVal) * 100;
             return (
-              <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end', position: 'relative' }} className="chart-bar-container">
+              <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end', position: 'relative', zIndex: 1 }} className="chart-bar-container">
                 <div className="chart-tooltip" style={{
                   position: 'absolute',
                   bottom: `${heightPct + 5}%`,
@@ -109,18 +185,20 @@ const TrendChartsView = ({ posts }) => {
                   boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
                   zIndex: 2
                 }}>
-                  {d.likes.toLocaleString()} Likes
+                  {currentVal.toLocaleString()} {metric === 'likes' ? 'Likes' : 'Comentarios'}
                 </div>
                 <div style={{
                   width: '100%',
                   height: `${heightPct}%`,
-                  background: 'linear-gradient(180deg, var(--accent-green) 0%, var(--accent-primary) 100%)',
+                  background: metric === 'likes' 
+                    ? 'linear-gradient(180deg, var(--accent-green) 0%, var(--accent-primary) 100%)' 
+                    : 'linear-gradient(180deg, #ff758f 0%, var(--accent-pink) 100%)',
                   borderRadius: '4px 4px 0 0',
                   minHeight: '4px',
                   cursor: 'pointer',
-                  transition: 'height 0.8s ease-in-out'
+                  transition: 'all 0.5s ease-in-out'
                 }} />
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
                   @{d.username}
                 </span>
               </div>
@@ -129,40 +207,64 @@ const TrendChartsView = ({ posts }) => {
         </div>
       </div>
 
-      {/* 2. Communication Tone Distribution */}
-      <div style={{ background: 'var(--bg-card)', padding: '16px', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)' }}>
-        <h4 style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginBottom: '16px' }}>🎭 Distribución del Tono de Comunicación</h4>
-        <div style={{ display: 'flex', height: '14px', borderRadius: '7px', overflow: 'hidden', marginBottom: '16px', background: 'rgba(255,255,255,0.05)' }}>
-          {toneData.map((t, index) => {
-            const colors = ['var(--accent-primary)', 'var(--accent-green)', 'var(--accent-pink)'];
-            if (t.percentage === 0) return null;
-            return (
-              <div 
-                key={index} 
-                style={{ 
-                  width: `${t.percentage}%`, 
-                  backgroundColor: colors[index], 
-                  height: '100%', 
-                  transition: 'width 0.8s ease-in-out' 
-                }} 
-                title={`${t.name}: ${t.percentage}%`}
-              />
-            );
-          })}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {toneData.map((t, index) => {
-            const colors = ['var(--accent-primary)', 'var(--accent-green)', 'var(--accent-pink)'];
-            return (
-              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+      {/* 2. Communication Tone Distribution (Donut / Circle Chart) */}
+      <div style={{ background: 'var(--bg-card)', padding: '16px', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h4 style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>🎭 Distribución del Tono de Comunicación</h4>
+        
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', padding: '10px 0' }}>
+          {/* SVG Donut */}
+          <div style={{ width: '120px', height: '120px', position: 'relative', flexShrink: 0 }}>
+            <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+              {/* Background circle */}
+              <circle cx="50" cy="50" r="35" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="9" />
+              {/* Segments */}
+              {toneSegments.map((segment, idx) => (
+                <circle
+                  key={idx}
+                  cx="50"
+                  cy="50"
+                  r="35"
+                  fill="none"
+                  stroke={segment.color}
+                  strokeWidth="9"
+                  strokeDasharray={segment.strokeDasharray}
+                  strokeDashoffset={segment.strokeDashoffset}
+                  strokeLinecap={segment.percentage > 0 ? "round" : "butt"}
+                  style={{
+                    transition: 'stroke-dashoffset 0.8s ease-in-out, stroke-dasharray 0.8s ease-in-out',
+                    transformOrigin: '50px 50px'
+                  }}
+                />
+              ))}
+            </svg>
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-light)', fontWeight: '600', lineHeight: 1.1 }}>Tono</span>
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Dominante</span>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minWidth: '160px' }}>
+            {toneSegments.map((t, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colors[index] }} />
-                  <span style={{ color: 'var(--text-main)' }}>{t.name}</span>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: t.color }} />
+                  <span style={{ color: 'var(--text-muted)' }}>{t.name}</span>
                 </div>
-                <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>{t.percentage}% ({t.count})</span>
+                <span style={{ color: 'var(--text-light)', fontWeight: '600' }}>{t.percentage}% ({t.count})</span>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -176,7 +278,7 @@ const TrendChartsView = ({ posts }) => {
               const widthPct = (h.count / maxCount) * 100;
               return (
                 <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
                     <span style={{ color: 'var(--accent-primary)', fontWeight: '500' }}>{h.tag}</span>
                     <span style={{ color: 'var(--text-muted)' }}>{h.count} {h.count === 1 ? 'mención' : 'menciones'}</span>
                   </div>
@@ -194,7 +296,7 @@ const TrendChartsView = ({ posts }) => {
             })}
           </div>
         ) : (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>No se detectaron hashtags en las publicaciones.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>No se detectaron hashtags en las publicaciones.</p>
         )}
       </div>
     </div>
