@@ -1,0 +1,37 @@
+# Dependency directories
+node_modules/
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache and builds
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Databases
+backend/instamed.db
+backend/instamed.db-journal
+
+# Local environment variables
+.env
+.env.local
+.env.*.local
+
+# Build output
+frontend/dist/
+frontend/dist-ssr/
+
+# Editor and system files
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.log

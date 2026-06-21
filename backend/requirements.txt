@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+instagrapi>=2.1.2
+pydantic>=2.7.1
+pydantic-ai-slim
+groq
+python-dotenv
+pytest
